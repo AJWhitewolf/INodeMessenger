@@ -1,0 +1,50 @@
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <style>
+        #messagePanel {
+            width: 600px;
+            height: 600px;
+            border: 1px solid black;
+        }
+        #messagePanel ul {
+            list-style-type: none;
+            margin-left: 0;
+            padding-left: 10px;
+        }
+        #messagePanel ul li {
+            margin-top: 5px;
+        }
+        #chatMsg {
+            width: 550px;
+        }
+    </style>
+</head>
+<body>
+    <div id="messagePanel">
+        <ul></ul>
+    </div>
+    <div id="inputPanel">
+        <input id="chatMsg"><a href="javascript:sendEngineMessage()">Send</a>
+    </div>
+    <script src="./bower_components/socket.io-client/socket.io.js"></script>
+    <script src="./bower_components/engine.io-client/engine.io.js"></script>
+    <script src="imessenger.js"></script>
+<script>
+    var Messenger = new IMessenger('http://localhost:3003');
+
+    Messenger.registerListener("chat_say", function(data) {
+        $("#messagePanel ul").append($("<li></li>").html(data));
+    });
+
+    Messenger.registerListener("broadcast", function(data){
+        alert(data);
+    });
+
+    function sendEngineMessage() {
+        Messenger.send({event: 'chat_say', data: $("#chatMsg").val()});
+        $("#chatMsg").val("");
+    }
+</script>
+</body>
+</html>
