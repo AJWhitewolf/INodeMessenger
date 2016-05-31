@@ -8,6 +8,7 @@ var model = function(data) {
     }
     if(data.ack) {
         this.ack = data.ack;
+        this.ackId = data.ackId;
     }
 };
 
