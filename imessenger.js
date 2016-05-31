@@ -46,7 +46,7 @@ var IMessenger = function(url) {
             this.ackBacks[data.ackId] = callback;
           }
           this.send(data);
-        }
+        },
         sendRaw : function(data) {
             this.engine.socket.binaryType = 'blob';
             this.engine.send(data);
