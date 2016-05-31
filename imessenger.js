@@ -4,6 +4,7 @@ var IMessenger = function(url) {
         listeners : [],
         ackBacks: {},
         logBacks: {},
+        responseBacks: {},
         registerListener : function(which, callback){
             this.send({register: "event", listeners: [which]});
             var newEvent = {
@@ -50,16 +51,30 @@ var IMessenger = function(url) {
         },
         sendExpectingResponse : function(data, callback) {
           var s = this;
-          data.responseExpected = true;
-          this.sendWithAck(data, function(ack) {
-            var eventId = ack.eventId;
-            var callbackAndUnregister = function(cData) {
-              if(cData.eventId == eventId) {
-                callback(cData);
-                s.unregisterListener(data.event, callbackAndUnregister);
+          var responseId = Math.random().toString(36).slice(2);
+          data.responseId = responseId;
+          this.responseBacks[responseId] = {
+            responseId: responseId,
+            eventName: data.event,
+            eventId: "",
+            callback: function(responseData) {
+              callback(responseData);
+              var check = false;
+              newLib.listeners.forEach(function(item){
+                if(item.event == data.event) {
+                  check = true;
+                }
+              });
+              if(!check){
+                newLib.send({unregister: "event", listeners: [data.event]});
               }
-            };
-            s.registerListener(data.event, callbackAndUnregister);
+              delete newLib.responseBacks[responseId];
+            }
+          };
+          this.sendWithAck({register: "event", listeners: [data.event]}, function(dummy){
+            newLib.sendWithAck(data, function(ack){
+              newLib.responseBacks[responseId].eventId = ack.eventId;
+            });
           });
         },
         sendRaw : function(data) {
@@ -67,8 +82,17 @@ var IMessenger = function(url) {
             this.engine.send(data);
         },
         unregisterListener: function(which, callback) {
-            var pos = this.listeners.indexOf(which);
-            this.listeners.splice(pos, 1);
+            this.sendWithAck({unregister: "event", listeners: [which]}, function(ack) {
+              var k;
+              for(var i=0;i<newLib.listeners.length;i++){
+                if(newLib.listeners[i].event == which) {
+                  k=i;
+                }
+              }
+              if(k && k != -1) {
+                newLib.listeners.splice(k, 1);
+              }
+            });
         },
         getLog: function(size, callback) {
             var data = {
@@ -98,11 +122,17 @@ var IMessenger = function(url) {
               }
             }
             if(msg.event) {
+              if(msg.responseTo) {
+                if(newLib.responseBacks[msg.responseTo] && typeof(newLib.responseBacks[msg.responseTo].callback) == "function") {
+                  newLib.responseBacks[msg.responseTo].callback(msg);
+                }
+              } else {
                 newLib.listeners.forEach(function(item){
                     if(item.event == msg.event) {
-                        item.callback(msg.data);
+                        item.callback(msg);
                     }
                 });
+              }
             }
             if(msg.error) {
                 console.log(msg.error);

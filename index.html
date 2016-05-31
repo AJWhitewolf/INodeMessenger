@@ -34,11 +34,11 @@
     var Messenger = new IMessenger('http://localhost:3003');
 
     Messenger.registerListener("chat_say", function(data) {
-        $("#messagePanel ul").append($("<li></li>").html(data));
+        $("#messagePanel ul").append($("<li></li>").html(data.data));
     });
 
     Messenger.registerListener("broadcast", function(data){
-        alert(data);
+        alert(data.data);
     });
 
     function sendEngineMessage() {

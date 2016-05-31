@@ -10,8 +10,11 @@ var model = function(data) {
         this.ack = data.ack;
         this.ackId = data.ackId;
     }
-    if(data.responseExpected) {
-        this.responseExpected;
+    if(data.responseId) {
+        this.responseId = data.responseId;
+    }
+    if(data.responseTo) {
+      this.responseTo = data.responseTo;
     }
 };
 

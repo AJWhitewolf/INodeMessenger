@@ -23,14 +23,22 @@ function incomingData(socket, data) {
         if(dData.register == "namespace") {
             socket.registerNamespace(dData.namespace);
         }
+        if(dData.unregister == "event") {
+            socket.unregisterListeners(dData.listeners);
+        }
         if(dData.event) {
             socket.handleEvent(dData);
         }
-        if(dData.ackId){
-          socket.ackLog.push(dData.ackId);
-        }
         if(dData.log) {
             socket.getToLog(dData);
+        }
+        if(dData.getListeners) {
+          socket.getListeners();
+        }
+        if(!dData.event) {
+          if(dData.ack){
+            socket.sendAck(dData);
+          }
         }
     }
 }
@@ -72,7 +80,19 @@ function addHandlers(socket) {
             if (!Listeners[item]) {
                 Listeners[item] = [];
             }
-            Listeners[item].push(socket);
+            if(Listeners[item].indexOf(socket) < 0) {
+              Listeners[item].push(socket);
+            }
+        });
+    };
+    socket.unregisterListeners = function(listeners){
+        var listenerList = socket.listeners;
+        listeners.forEach(function(listener){
+          if(listenerList.indexOf(listener) > -1) {
+            var k = Listeners[listener].indexOf(socket);
+            Listeners[listener].splice(k, 1);
+            socket.listeners.splice(socket.listeners.indexOf(listener), 1);
+          }
         });
     };
     socket.registerNamespace = function(name) {
@@ -101,10 +121,9 @@ function addHandlers(socket) {
         } else {
             eventQueue.push(event);
             socket.logEventFrom(event);
-            if(event.ack) {
-              var ack = new cAck(event);
-              socket.send(JSON.stringify(ack));
-            }
+        }
+        if(event.ack){
+          socket.sendAck(event);
         }
     };
     socket.handleClose = function() {
@@ -160,7 +179,15 @@ function addHandlers(socket) {
         log: events
       };
       socket.send(JSON.stringify(log));
-    }
+    };
+    socket.sendAck = function(data) {
+      var ack = new cAck(data);
+      socket.send(JSON.stringify(ack));
+      socket.ackLog.push(ack);
+    };
+    socket.getListeners = function() {
+      socket.send(JSON.stringify(socket.listeners));
+    };
 }
 
 var eventLoop = setInterval(function() {
