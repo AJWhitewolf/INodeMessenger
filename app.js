@@ -30,7 +30,7 @@ function incomingData(socket, data) {
           socket.ackLog.push(dData.ackId);
         }
         if(dData.log) {
-            socket.getLog(dData.log);
+            socket.getToLog(dData);
         }
     }
 }
@@ -63,7 +63,8 @@ net.createServer(function(socket) {
 
 function addHandlers(socket) {
     socket.listeners = [];
-    socket.eventLog = [];
+    socket.eventLogFrom = [];
+    socket.eventLogTo = [];
     socket.ackLog = [];
     socket.registerListeners = function(listeners) {
         listeners.forEach(function(item) {
@@ -93,13 +94,13 @@ function addHandlers(socket) {
         if(event.namespace) {
             if(Spaces[event.namespace]) {
                 eventQueue.push(event);
-                socket.logEvent(event);
+                socket.logEventFrom(event);
             } else {
                 socket.send(JSON.stringify({error: "Namespace not found"}));
             }
         } else {
             eventQueue.push(event);
-            socket.logEvent(event);
+            socket.logEventFrom(event);
             if(event.ack) {
               var ack = new cAck(event);
               socket.send(JSON.stringify(ack));
@@ -114,25 +115,52 @@ function addHandlers(socket) {
             Listeners[item].splice(k, 1);
         });
     };
-    socket.logEvent = function(event) {
-        if(socket.eventLog.length >= LOGMAX) {
-            socket.eventLog.pop();
+    socket.logEventFrom = function(event) {
+        if(socket.eventLogFrom.length >= LOGMAX) {
+            socket.eventLogFrom.pop();
         }
-        socket.eventLog.unshift(event);
+        socket.eventLogFrom.unshift(event);
     };
-    socket.getLog = function(max) {
+    socket.logEventTo = function(event) {
+      if(socket.eventLogTo.length >= LOGMAX) {
+          socket.eventLogTo.pop();
+      }
+      socket.eventLogTo.unshift(event);
+    };
+    socket.getFromLog = function(data) {
         var events = [];
-        var count = max;
+        var count = data.size;
         //Determine which is larger, the size of the array or the max value
-        if(max > socket.eventLog.length) {
-            count = socket.eventLog.length;
+        if(data.size > socket.eventLogFrom.length) {
+            count = socket.eventLogFrom.length;
         }
         for(var i=0;i<count;i++) {
-            events.push(socket.eventLog[i]);
+            events.push(socket.eventLogFrom[i]);
         }
         console.log("Event log request, logs: "+events);
-        socket.send(JSON.stringify({log: events}));
+        var log = {
+          logId: data.logId,
+          log: events
+        };
+        socket.send(JSON.stringify(log));
     };
+    socket.getToLog = function(data) {
+      var events = [];
+      var count = data.size;
+      //Determine which is larger, the size of the array or the max value
+      if(data.size > socket.eventLogTo.length) {
+          count = socket.eventLogTo.length;
+      }
+      for(var i=0;i<count;i++) {
+          events.push(socket.eventLogTo[i]);
+      }
+      console.log("Event log request, logs: "+events);
+      var log = {
+        logId: data.logId,
+        log: events
+      };
+      socket.send(JSON.stringify(log));
+    }
 }
 
 var eventLoop = setInterval(function() {
@@ -149,12 +177,14 @@ function emitEvent(event) {
         Spaces[event.namespace].forEach(function(client) {
             if(client.listeners.indexOf(event.event) > -1) {
                 client.send(JSON.stringify(event));
+                client.logEventTo(event);
             }
         });
     } else {
       if(Listeners[event.event]){
         Listeners[event.event].forEach(function(item){
             item.send(JSON.stringify(event));
+            item.logEventTo(event);
         });
       }
     }

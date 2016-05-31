@@ -3,6 +3,7 @@ var IMessenger = function(url) {
         engine : null,
         listeners : [],
         ackBacks: {},
+        logBacks: {},
         registerListener : function(which, callback){
             this.send({register: "event", listeners: [which]});
             var newEvent = {
@@ -55,8 +56,15 @@ var IMessenger = function(url) {
             var pos = this.listeners.indexOf(which);
             this.listeners.splice(pos, 1);
         },
-        getLog: function(size) {
-            this.send(JSON.stringify({log: size}));
+        getLog: function(size, callback) {
+            var data = {
+              log: size,
+              logId: Math.random().toString(36).slice(2)
+            };
+            if(callback) {
+              this.logBacks[data.logId] = callback;
+            }
+            this.send(JSON.stringify(data));
         },
         ack: function(msgId) {
             this.send(JSON.stringify({ackId: msgId}));
