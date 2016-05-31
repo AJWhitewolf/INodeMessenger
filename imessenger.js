@@ -48,6 +48,20 @@ var IMessenger = function(url) {
           }
           this.send(data);
         },
+        sendExpectingResponse : function(data, callback) {
+          var s = this;
+          data.responseExpected = true;
+          this.sendWithAck(data, function(ack) {
+            var eventId = ack.eventId;
+            var callbackAndUnregister = function(cData) {
+              if(cData.eventId == eventId) {
+                callback(cData);
+                s.unregisterListener(data.event, callbackAndUnregister);
+              }
+            };
+            s.registerListener(data.event, callbackAndUnregister);
+          });
+        },
         sendRaw : function(data) {
             this.engine.socket.binaryType = 'blob';
             this.engine.send(data);
@@ -94,7 +108,9 @@ var IMessenger = function(url) {
                 console.log(msg.error);
             }
             if(msg.log) {
-                console.log(msg.log);
+                if(newLib.logBacks[msg.logId] && typeof(newLib.logBacks[msg.logId]) == "function") {
+                  newLib.logBacks[msg.logId](msg.log);
+                }
             }
         });
     });

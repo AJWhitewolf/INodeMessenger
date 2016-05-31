@@ -10,6 +10,9 @@ var model = function(data) {
         this.ack = data.ack;
         this.ackId = data.ackId;
     }
+    if(data.responseExpected) {
+        this.responseExpected;
+    }
 };
 
 module.exports = model;
