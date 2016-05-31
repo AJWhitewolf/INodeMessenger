@@ -3,6 +3,7 @@ var engine = require('engine.io');
 var net = require('net');
 
 var cEvent = require('./models/clientEvent');
+var cAck = require('./models/acknowledgement.js');
 
 var httpServer = http.createServer();
 var engineServer = engine.attach(httpServer);
@@ -24,6 +25,9 @@ function incomingData(socket, data) {
         }
         if(dData.event) {
             socket.handleEvent(dData);
+        }
+        if(dData.ackId){
+          socket.ackLog.push(dData.ackId);
         }
         if(dData.log) {
             socket.getLog(dData.log);
@@ -96,6 +100,10 @@ function addHandlers(socket) {
         } else {
             eventQueue.push(event);
             socket.logEvent(event);
+            if(event.ack) {
+              var ack = new cAck(event);
+              socket.send(JSON.stringify(ack));
+            }
         }
     };
     socket.handleClose = function() {
@@ -144,8 +152,10 @@ function emitEvent(event) {
             }
         });
     } else {
+      if(Listeners[event.event]){
         Listeners[event.event].forEach(function(item){
             item.send(JSON.stringify(event));
         });
+      }
     }
 }

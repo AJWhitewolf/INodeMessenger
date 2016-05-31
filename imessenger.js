@@ -2,6 +2,7 @@ var IMessenger = function(url) {
     var newLib = {
         engine : null,
         listeners : [],
+        ackBacks: {},
         registerListener : function(which, callback){
             this.send({register: "event", listeners: [which]});
             var newEvent = {
@@ -38,6 +39,14 @@ var IMessenger = function(url) {
             }
             this.engine.send(JSON.stringify(data));
         },
+        sendWithAck : function(data, callback) {
+          data.ack = true;
+          data.ackId = Math.random().toString(36).slice(2);
+          if(callback){
+            this.ackBacks[data.ackId] = callback;
+          }
+          this.send(data);
+        }
         sendRaw : function(data) {
             this.engine.socket.binaryType = 'blob';
             this.engine.send(data);
@@ -60,6 +69,11 @@ var IMessenger = function(url) {
             var msg = JSON.parse(data);
             if(msg.ack) {
                 newLib.ack(msg.eventId);
+            }
+            if(msg.ackId) {
+              if(newLib.ackBacks[msg.ackId] && typeof(newLib.ackBacks[msg.ackId]) == "function") {
+                newLib.ackBacks[msg.ackId](msg);
+              }
             }
             if(msg.event) {
                 newLib.listeners.forEach(function(item){

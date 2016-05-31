@@ -8,8 +8,6 @@ var model = function(data) {
     }
     if(data.ack) {
         this.ack = data.ack;
-    } else {
-        this.ack = false;
     }
 };
 
