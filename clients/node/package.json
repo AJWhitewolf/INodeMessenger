@@ -1,5 +1,5 @@
 {
-  "name": "nodemessagingservice",
+  "name": "imessenger-client-node",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
@@ -9,9 +9,6 @@
   "author": "Owen Dunigan",
   "license": "ISC",
   "dependencies": {
-    "engine.io": "^1.6.9",
-    "express": "^4.13.4",
-    "http": "0.0.0",
-    "nodejs-websocket": "^1.6.0"
+    "engine.io-client": "^1.6.9"
   }
 }
